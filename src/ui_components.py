@@ -653,6 +653,36 @@ class RaceProgressBarComponent(BaseComponent):
             (255, 255, 255), 12,
             anchor_x="center", anchor_y="center"
         ).draw()
+        
+    def _draw_legend(self, window):
+        """Draw a small legend explaining the markers."""
+        legend_items = [
+            (self.COLORS["dnf"], "X", "DNF"),
+            (self.COLORS["yellow_flag"], "■", "Yellow"),
+            (self.COLORS["red_flag"], "■", "Red"),
+            (self.COLORS["safety_car"], "■", "SC"),
+            (self.COLORS["vsc"], "■", "VSC"),
+        ]
+        
+        legend_x = self._bar_left + self._bar_width + 10
+        legend_y = self.bottom + self.height / 2
+        
+        # Only draw if there's space
+        if legend_x + 100 < window.width:
+            for i, (color, symbol, label) in enumerate(legend_items):
+                x = legend_x + (i * 45)
+                arcade.Text(
+                    symbol,
+                    x, legend_y + 2,
+                    color, 10, bold=True,
+                    anchor_x="center", anchor_y="center"
+                ).draw()
+                arcade.Text(
+                    label,
+                    x, legend_y - 10,
+                    self.COLORS["text"], 8,
+                    anchor_x="center", anchor_y="top"
+                ).draw()
 # Build track geometry from example lap telemetry
 
 def build_track_from_example_lap(example_lap, track_width=200):
