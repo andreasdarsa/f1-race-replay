@@ -277,23 +277,29 @@ class LeaderboardComponent(BaseComponent):
 
 
     def on_mouse_press(self, window, x: float, y: float, button: int, modifiers: int):
-        # interval toggle (radio behaviour)
+        # interval toggle (radio type)
         if self.neighbor_toggle_rect:
             n_left, n_bottom, n_right, n_top = self.neighbor_toggle_rect
             if n_left <= x <= n_right and n_bottom <= y <= n_top:
-                # select interval gaps and deselect leader gaps
-                if not self.show_neighbor_gaps:
+                if self.show_neighbor_gaps:
+                    # currently selected -> deselect
+                    self.show_neighbor_gaps = False
+                    setattr(window, "leaderboard_show_neighbor_gaps", False)
+                else:
+                    # select interval gaps and deselect leader gaps
                     self.show_neighbor_gaps = True
                     self.show_gaps = False
                     setattr(window, "leaderboard_show_neighbor_gaps", True)
                     setattr(window, "leaderboard_show_gaps", False)
                 return True
-        # leader toggle (radio behaviour)
+        # leader toggle (radio type)
         if self.gap_toggle_rect:
             g_left, g_bottom, g_right, g_top = self.gap_toggle_rect
             if g_left <= x <= g_right and g_bottom <= y <= g_top:
-                # select leader gaps and deselect interval gaps
-                if not self.show_gaps:
+                if self.show_gaps:
+                    self.show_gaps = False
+                    setattr(window, "leaderboard_show_gaps", False)
+                else:
                     self.show_gaps = True
                     self.show_neighbor_gaps = False
                     setattr(window, "leaderboard_show_gaps", True)
