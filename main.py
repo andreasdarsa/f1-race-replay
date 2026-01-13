@@ -85,7 +85,8 @@ def main(year=None, round_number=None, playback_speed=1, session_type='R', visib
       total_laps=race_telemetry['total_laps'],
       circuit_rotation=circuit_rotation,
       visible_hud=visible_hud
-      ,ready_file=ready_file
+      ,ready_file=ready_file,
+      session=session
     )
 
 if __name__ == "__main__":
