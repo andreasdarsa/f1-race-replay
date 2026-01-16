@@ -210,7 +210,7 @@ class RaceSelectionWindow(QMainWindow):
             flag = "--sprint"
 
         main_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'main.py'))
-        cmd = [sys.executable, main_path]
+        cmd = [sys.executable, main_path, "--viewer"]
         if year is not None:
             cmd += ["--year", str(year)]
         if round_no is not None:

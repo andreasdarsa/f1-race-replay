@@ -27,7 +27,7 @@ Recently added support for Qualifying session replays with telemetry visualizati
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.11+
 - [FastF1](https://github.com/theOehrly/Fast-F1)
 - [Arcade](https://api.arcade.academy/en/latest/)
 - numpy
@@ -70,63 +70,54 @@ To get started with this project locally, you can follow these steps:
 
 ## Usage
 
-**NEW GUI MENU:** To use the new GUI menu system, you can simply run:
+**DEFAULT CLI MENU:** To use the new CLI menu system, you can simply run:
 ```bash
-python main.py --gui
+python main.py
 ```
-This will open a graphical interface where you can select the year and round of the race weekend you want to replay. This is still a new feature, so please report any issues you encounter.
 
-**NEW CLI MENU:** To use the new CLI menu system, you can simply run:
-```bash
-python main.py --cli
-```
+![CLI Menu Preview](./resources/cli-menu.gif)
+
 This will prompt you with series of questions and a list of options to make your choice from.
 
-If you would prefer to use the command line arguments directly, you can do so as follows:
+If you would already know the year and round number of the session you would like to watch, you run the commands directly as follows:
 
 Run the main script and specify the year and round:
 ```bash
-python main.py --year 2025 --round 12
+python main.py --viewer --year 2025 --round 12
 ```
 
 To run without HUD:
 ```bash
-python main.py --year 2025 --round 12 --no-hud
+python main.py --viewer --year 2025 --round 12 --no-hud
 ```
 
 To run a Sprint session (if the event has one), add `--sprint`:
 ```bash
-python main.py --year 2025 --round 12 --sprint
+python main.py --viewer --year 2025 --round 12 --sprint
 ```
 
 The application will load a pre-computed telemetry dataset if you have run it before for the same event. To force re-computation of telemetry data, use the `--refresh-data` flag:
 ```bash
-python main.py --year 2025 --round 12 --refresh-data
-```
-
-### Search Round Numbers (including Sprints)
-
-To find the round number for a specific Grand Prix event, you can use the `--list-rounds` flag along with the year to return a list of events and their corresponding round numbers:
-```bash
-python main.py --year 2025 --list-rounds
-```
-
-To return a list of events that include Sprint sessions, use the `--list-sprints` flag:
-```bash
-python main.py --year 2025 --list-sprints
+python main.py --viewer --year 2025 --round 12 --refresh-data
 ```
 
 ### Qualifying Session Replay
 
 To run a Qualifying session replay, use the `--qualifying` flag:
 ```bash
-python main.py --year 2025 --round 12 --qualifying
+python main.py --viewer --year 2025 --round 12 --qualifying
 ```
 
 To run a Sprint Qualifying session (if the event has one), add `--sprint`:
 ```bash
-python main.py --year 2025 --round 12 --qualifying --sprint
+python main.py --viewer --year 2025 --round 12 --qualifying --sprint
 ```
+
+**NEW GUI MENU:** To use the new GUI menu system, you can simply run:
+```bash
+python main.py --gui
+```
+This will open a graphical interface where you can select the year and round of the race weekend you want to replay. This is still a new feature, so please report any issues you encounter.
 
 ## File Structure
 

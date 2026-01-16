@@ -95,11 +95,6 @@ if __name__ == "__main__":
     win = RaceSelectionWindow()
     win.show()
     sys.exit(app.exec())
-  
-  if "--cli" in sys.argv:
-    cli_load()
-    sys.exit(0)
-  # Get the year and round number from user input
 
   if "--year" in sys.argv:
     year_index = sys.argv.index("--year") + 1
@@ -119,19 +114,26 @@ if __name__ == "__main__":
     list_sprints(year)
   else:
     playback_speed = 1
+
+  if "--viewer" in sys.argv:
   
-  visible_hud = True
-  if "--no-hud" in sys.argv:
-    visible_hud = False
+    visible_hud = True
+    if "--no-hud" in sys.argv:
+      visible_hud = False
 
-  # Session type selection
-  session_type = 'SQ' if "--sprint-qualifying" in sys.argv else ('S' if "--sprint" in sys.argv else ('Q' if "--qualifying" in sys.argv else 'R'))
+    # Session type selection
+    session_type = 'SQ' if "--sprint-qualifying" in sys.argv else ('S' if "--sprint" in sys.argv else ('Q' if "--qualifying" in sys.argv else 'R'))
 
-  # Optional ready-file path used when spawned from the GUI to signal ready state
-  ready_file = None
-  if "--ready-file" in sys.argv:
-    idx = sys.argv.index("--ready-file") + 1
-    if idx < len(sys.argv):
-      ready_file = sys.argv[idx]
+    # Optional ready-file path used when spawned from the GUI to signal ready state
+    ready_file = None
+    if "--ready-file" in sys.argv:
+      idx = sys.argv.index("--ready-file") + 1
+      if idx < len(sys.argv):
+        ready_file = sys.argv[idx]
 
-  main(year, round_number, playback_speed, session_type=session_type, visible_hud=visible_hud, ready_file=ready_file)
+    main(year, round_number, playback_speed, session_type=session_type, visible_hud=visible_hud, ready_file=ready_file)
+
+  # Run the CLI
+
+  cli_load()
+  sys.exit(0)

@@ -62,11 +62,11 @@ def cli_load():
         case "Qualifying":
             flag = "--qualifying" 
         case "Sprint Qualifying":
-            flag = "--qualifying --sprint"  
+            flag = "--sprint-qualifying"  
         case "Sprint":
             flag = "--sprint"     
     main_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'main.py'))
-    cmd = [sys.executable, main_path]
+    cmd = [sys.executable, main_path, "--viewer"]
     if year is not None:
         cmd += ["--year", str(year)]
     if round_number is not None:

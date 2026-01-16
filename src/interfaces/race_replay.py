@@ -9,14 +9,17 @@ from src.ui_components import (
     DriverInfoComponent, 
     RaceProgressBarComponent,
     RaceControlsComponent,
+    ControlsPopupComponent,
     extract_race_events,
-    build_track_from_example_lap
+    build_track_from_example_lap,
+    draw_finish_line
 )
 
 
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 SCREEN_TITLE = "F1 Race Replay"
+PLAYBACK_SPEEDS = [0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0, 256.0]
 
 class F1RaceReplayWindow(arcade.Window):
     def __init__(self, frames, track_statuses, example_lap, drivers, title,
@@ -30,7 +33,7 @@ class F1RaceReplayWindow(arcade.Window):
         self.track_statuses = track_statuses
         self.n_frames = len(frames)
         self.drivers = list(drivers)
-        self.playback_speed = playback_speed
+        self.playback_speed = PLAYBACK_SPEEDS[PLAYBACK_SPEEDS.index(playback_speed)] if playback_speed in PLAYBACK_SPEEDS else 1.0
         self.driver_colors = driver_colors or {}
         self.frame_index = 0.0  # use float for fractional-frame accumulation
         self.paused = False
@@ -53,7 +56,12 @@ class F1RaceReplayWindow(arcade.Window):
         self.weather_comp = WeatherComponent(left=20, top_offset=170, visible=visible_hud)
         self.legend_comp = LegendComponent(x=max(12, self.left_ui_margin - 320), visible=visible_hud)
         self.driver_info_comp = DriverInfoComponent(left=20, width=300)
-        
+        self.controls_popup_comp = ControlsPopupComponent()
+
+        self.controls_popup_comp.set_size(340, 230) # width/height of the popup box
+        self.controls_popup_comp.set_font_sizes(header_font_size=16, body_font_size=13) # adjust font sizes
+
+
         # Progress bar component with race event markers
         self.progress_bar_comp = RaceProgressBarComponent(
             left_margin=left_ui_margin,
@@ -69,6 +77,10 @@ class F1RaceReplayWindow(arcade.Window):
             center_y=100,
             visible = visible_hud
         )
+
+        self.is_rewinding = False
+        self.is_forwarding = False
+        self.was_paused_before_hold = False
         
         # Extract race events for the progress bar
         race_events = extract_race_events(frames, track_statuses, total_laps or 0)
@@ -331,6 +343,7 @@ class F1RaceReplayWindow(arcade.Window):
                 if len(drs_outer_points) > 1:
                     arcade.draw_line_strip(drs_outer_points, drs_color, 6)
 
+        draw_finish_line(self)
         # 3. Draw Cars
         frame = self.frames[idx]
         for code, pos in frame["drivers"].items():
@@ -353,14 +366,6 @@ class F1RaceReplayWindow(arcade.Window):
 
             # Project (x,y) to reference and combine with lap count
             projected_m = self._project_to_reference(pos.get("x", 0.0), pos.get("y", 0.0))
-
-            # Fix for start-line wrap-around:
-            # If on Lap 1, and telemetry distance suggests we are near start (e.g. < 50% lap),
-            # but projection suggests we are near end (> 50% lap), it means we are behind the line.
-            # We subtract lap length to make progress negative (e.g. -10m instead of 4990m).
-            telemetry_dist = float(pos.get("dist", 0.0))
-            if lap == 1 and telemetry_dist < self._ref_total_length * 0.5 and projected_m > self._ref_total_length * 0.5:
-                projected_m -= self._ref_total_length
 
             # progress in metres since race start: (lap-1) * lap_length + projected_m
             progress_m = float((max(lap, 1) - 1) * self._ref_total_length + projected_m)
@@ -442,35 +447,63 @@ class F1RaceReplayWindow(arcade.Window):
         
         # Race playback control buttons
         self.race_controls_comp.draw(self)
+
+        # Draw Controls popup box
+        self.controls_popup_comp.draw(self)
         
         # Draw tooltips and overlays on top of everything
         self.progress_bar_comp.draw_overlays(self)
                     
     def on_update(self, delta_time: float):
-        # Update race controls component (for flash animations)
         self.race_controls_comp.on_update(delta_time)
+        
+        seek_speed = 3.0 * max(1.0, self.playback_speed) # Multiplier for seeking speed, scales with current playback speed
+        if self.is_rewinding:
+            self.frame_index = max(0.0, self.frame_index - delta_time * FPS * seek_speed)
+            self.race_controls_comp.flash_button('rewind')
+        elif self.is_forwarding:
+            self.frame_index = min(self.n_frames - 1, self.frame_index + delta_time * FPS * seek_speed)
+            self.race_controls_comp.flash_button('forward')
+
         if self.paused:
             return
+
         self.frame_index += delta_time * FPS * self.playback_speed
+        
         if self.frame_index >= self.n_frames:
             self.frame_index = float(self.n_frames - 1)
 
     def on_key_press(self, symbol: int, modifiers: int):
+        # Allow ESC to close window at any time
+        if symbol == arcade.key.ESCAPE:
+            arcade.close_window()
+            return
         if symbol == arcade.key.SPACE:
             self.paused = not self.paused
             self.race_controls_comp.flash_button('play_pause')
         elif symbol == arcade.key.RIGHT:
-            self.frame_index = min(self.frame_index + 10.0, self.n_frames - 1)
-            self.race_controls_comp.flash_button('forward')
+            self.was_paused_before_hold = self.paused
+            self.is_forwarding = True
+            self.paused = True
         elif symbol == arcade.key.LEFT:
-            self.frame_index = max(self.frame_index - 10.0, 0.0)
-            self.race_controls_comp.flash_button('rewind')
+            self.was_paused_before_hold = self.paused
+            self.is_rewinding = True
+            self.paused = True
         elif symbol == arcade.key.UP:
-            if self.playback_speed < 1024.0:
-                self.playback_speed *= 2.0
-                self.race_controls_comp.flash_button('speed_increase')
+            if self.playback_speed < PLAYBACK_SPEEDS[-1]:
+                # Increase to next higher speed
+                for spd in PLAYBACK_SPEEDS:
+                    if spd > self.playback_speed:
+                        self.playback_speed = spd
+                        break
+            self.race_controls_comp.flash_button('speed_increase')
         elif symbol == arcade.key.DOWN:
-            self.playback_speed = max(0.1, self.playback_speed / 2.0)
+            if self.playback_speed > PLAYBACK_SPEEDS[0]:
+                # Decrease to next lower speed
+                for spd in reversed(PLAYBACK_SPEEDS):
+                    if spd < self.playback_speed:
+                        self.playback_speed = spd
+                        break
             self.race_controls_comp.flash_button('speed_decrease')
         elif symbol == arcade.key.KEY_1:
             self.playback_speed = 0.5
@@ -490,16 +523,44 @@ class F1RaceReplayWindow(arcade.Window):
             self.race_controls_comp.flash_button('rewind')
         elif symbol == arcade.key.D:
             self.toggle_drs_zones = not self.toggle_drs_zones
+        elif symbol == arcade.key.H:
+            # Toggle Controls popup with 'H' key — show anchored to bottom-left with 20px margin
+            margin_x = 20
+            margin_y = 20
+            left_pos = float(margin_x)
+            top_pos = float(margin_y + self.controls_popup_comp.height)
+            if self.controls_popup_comp.visible:
+                self.controls_popup_comp.hide()
+            else:
+                self.controls_popup_comp.show_over(left_pos, top_pos)
         elif symbol == arcade.key.B:
             self.progress_bar_comp.toggle_visibility() # toggle progress bar visibility
 
+    def on_key_release(self, symbol: int, modifiers: int):
+        if symbol == arcade.key.RIGHT:
+            self.is_forwarding = False
+            self.paused = self.was_paused_before_hold
+        elif symbol == arcade.key.LEFT:
+            self.is_rewinding = False
+            self.paused = self.was_paused_before_hold
+
+    def on_mouse_release(self, x: float, y: float, button: int, modifiers: int):
+        if self.is_forwarding or self.is_rewinding:
+            self.is_forwarding = False
+            self.is_rewinding = False
+            self.paused = self.was_paused_before_hold
+
     def on_mouse_press(self, x: float, y: float, button: int, modifiers: int):
         # forward to components; stop at first that handled it
+        if self.controls_popup_comp.on_mouse_press(self, x, y, button, modifiers):
+            return
         if self.race_controls_comp.on_mouse_press(self, x, y, button, modifiers):
             return
         if self.progress_bar_comp.on_mouse_press(self, x, y, button, modifiers):
             return
         if self.leaderboard_comp.on_mouse_press(self, x, y, button, modifiers):
+            return
+        if self.legend_comp.on_mouse_press(self, x, y, button, modifiers):
             return
         # default: clear selection if clicked elsewhere
         self.selected_driver = None
