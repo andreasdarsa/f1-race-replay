@@ -76,14 +76,23 @@ To get started with this project locally, you can follow these steps:
 
 ## Usage
 
-**DEFAULT CLI MENU:** To use the new CLI menu system, you can simply run:
+**DEFAULT GUI MENU:** To use the new GUI menu system, you can simply run:
 ```bash
 python main.py
 ```
 
+![GUI Menu Preview](./resources/gui-menu.png)
+
+This will open a graphical interface where you can select the year and round of the race weekend you want to replay. This is still a new feature, so please report any issues you encounter.
+
+**OPTIONAL CLI MENU:** To use the CLI menu system, you can simply run:
+```bash
+python main.py --cli
+```
+
 ![CLI Menu Preview](./resources/cli-menu.gif)
 
-This will prompt you with series of questions and a list of options to make your choice from.
+This will prompt you with series of questions and a list of options to make your choice from using the arrow keys and enter key.
 
 If you would already know the year and round number of the session you would like to watch, you run the commands directly as follows:
 
@@ -118,12 +127,6 @@ To run a Sprint Qualifying session (if the event has one), add `--sprint`:
 ```bash
 python main.py --viewer --year 2025 --round 12 --qualifying --sprint
 ```
-
-**NEW GUI MENU:** To use the new GUI menu system, you can simply run:
-```bash
-python main.py --gui
-```
-This will open a graphical interface where you can select the year and round of the race weekend you want to replay. This is still a new feature, so please report any issues you encounter.
 
 ## File Structure
 
