@@ -267,6 +267,8 @@ class LeaderboardComponent(BaseComponent):
                     texture_name = os.path.splitext(filename)[0]
                     texture_path = os.path.join(tyres_folder, filename)
                     self._tyre_textures[texture_name] = arcade.load_texture(texture_path)
+        self.computed_gaps = {}
+        self.computed_neighbor_gaps = {}
 
     @property
     def visible(self) -> bool:
@@ -292,6 +294,41 @@ class LeaderboardComponent(BaseComponent):
     def set_entries(self, entries: List[Tuple[str, Tuple[int,int,int], dict, float]]):
         # entries sorted as expected
         self.entries = entries
+        self._calculate_gaps()
+
+    def _calculate_gaps(self):
+        self.computed_gaps = {}
+        self.computed_neighbor_gaps = {}
+        if not self.entries:
+            return
+
+        REFERENCE_SPEED_MS = 55.56
+        leader_progress_val = self.entries[0][3]
+
+        for idx, (code, _, pos, progress_m) in enumerate(self.entries):
+            # Leader gap
+            try:
+                raw_to_leader = abs(leader_progress_val - (progress_m or 0.0))
+                dist_to_leader = raw_to_leader / 10.0
+                time_to_leader = dist_to_leader / REFERENCE_SPEED_MS
+                self.computed_gaps[code] = 0.0 if idx == 0 else time_to_leader
+            except Exception:
+                self.computed_gaps[code] = None
+
+            # Neighbor gap
+            ahead_info = None
+            try:
+                if idx > 0:
+                    code_ahead, _, _, progress_ahead = self.entries[idx - 1]
+                    raw = abs((progress_m or 0.0) - (progress_ahead or 0.0))
+                    dist_m = raw / 10.0
+                    time_s = dist_m / REFERENCE_SPEED_MS
+                    ahead_info = (code_ahead, dist_m, time_s)
+            except Exception:
+                ahead_info = None
+            
+            self.computed_neighbor_gaps[code] = {"ahead": ahead_info}
+
     def draw(self, window):
         # Skip rendering entirely if hidden
         if not self._visible:
@@ -365,9 +402,7 @@ class LeaderboardComponent(BaseComponent):
 
             # Gap display (if enabled)
             if getattr(self, "show_neighbor_gaps", False):
-                neighbor_info = None
-                if hasattr(window, "leaderboard_neighbor_gaps"):
-                    neighbor_info = window.leaderboard_neighbor_gaps.get(code)
+                neighbor_info = self.computed_neighbor_gaps.get(code)
 
                 if i == 0:
                     gap_text = "-"
@@ -384,9 +419,7 @@ class LeaderboardComponent(BaseComponent):
             elif getattr(self, "show_gaps", False):
                 gap_text = ""
                 gap_val = None
-                # prefer window-provided precomputed gaps
-                if hasattr(window, "leaderboard_gaps"):
-                    gap_val = window.leaderboard_gaps.get(code)
+                gap_val = self.computed_gaps.get(code)
                 if gap_val is None:
                     gap_val = pos.get("gap") or pos.get("gap_to_leader")
                 if gap_val is None:
@@ -853,35 +886,21 @@ class DriverInfoComponent(BaseComponent):
                     lb = comp
                     break
 
-        # A fixed reference speed for all gap calculations (200 km/h = 55.56 m/s)
-        REFERENCE_SPEED_MS = 55.56
-
-        def calculate_gap(pos1, pos2):
-            # Calculate gap between two positions consistently
-            raw_dist = abs(pos1 - pos2)
-            dist = raw_dist / 10.0  # Convert to meters
-            time = dist / REFERENCE_SPEED_MS
-            return dist, time
-
         if lb and hasattr(lb, "entries") and lb.entries:
             try:
                 idx = next(i for i, e in enumerate(lb.entries) if e[0] == code)
+                curr_pos = lb.entries[idx][3]
 
-                if idx > 0:  # Car Ahead
-                    code_ahead = lb.entries[idx - 1][0]
-                    curr_pos = lb.entries[idx][3]
-                    ahead_pos = lb.entries[idx - 1][3]
+                def get_gap_str(neighbor_idx, prefix, sign):
+                    n_code, _, _, n_pos = lb.entries[neighbor_idx]
+                    dist = abs(curr_pos - n_pos) / 10.0
+                    time = dist / 55.56  # 200 km/h reference speed
+                    return f"{prefix} ({n_code}): {sign}{time:.2f}s ({dist:.1f}m)"
 
-                    dist, time = calculate_gap(curr_pos, ahead_pos)
-                    gap_ahead = f"Ahead ({code_ahead}): +{time:.2f}s ({dist:.1f}m)"
-
-                if idx < len(lb.entries) - 1:  # Car Behind
-                    code_behind = lb.entries[idx + 1][0]
-                    curr_pos = lb.entries[idx][3]
-                    behind_pos = lb.entries[idx + 1][3]
-
-                    dist, time = calculate_gap(curr_pos, behind_pos)
-                    gap_behind = f"Behind ({code_behind}): -{time:.2f}s ({dist:.1f}m)"
+                if idx > 0:
+                    gap_ahead = get_gap_str(idx - 1, "Ahead", "+")
+                if idx < len(lb.entries) - 1:
+                    gap_behind = get_gap_str(idx + 1, "Behind", "-")
 
             except (StopIteration, IndexError):
                 pass
