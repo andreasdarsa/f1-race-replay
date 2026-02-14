@@ -55,7 +55,7 @@ class F1RaceReplayWindow(arcade.Window):
         self.playback_speed = PLAYBACK_SPEEDS[PLAYBACK_SPEEDS.index(playback_speed)] if playback_speed in PLAYBACK_SPEEDS else 1.0
         self.driver_colors = driver_colors or {}
         self.frame_index = 0.0  # use float for fractional-frame accumulation
-        self.paused = False
+        self.paused = True
         self.total_laps = total_laps
         self.has_weather = any("weather" in frame for frame in frames) if frames else False
         self.visible_hud = visible_hud # If it displays HUD or not (leaderboard, controls, weather, etc)
